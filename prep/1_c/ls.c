@@ -23,5 +23,6 @@ int main(int argc, char *argv[]) {
 
   list_contents(dirp);
 
+  closedir(dirp);
   return 0;
 }
