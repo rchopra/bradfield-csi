@@ -3,20 +3,30 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <sys/stat.h>
 
 #define DEFAULT_DIR "."
+
+void print_entry(struct dirent *ent) {
+  struct stat filestats;
+
+  if (stat(ent->d_name, &filestats)) {
+    printf("%s\n", strerror(errno));
+    exit(1);
+  }
+  printf("%3llu %-9s\n", filestats.st_blocks, ent->d_name);
+}
 
 void list_contents(DIR *dirp) {
   // TODO: Sort files like `ls` by default
   // TODO: Implement the -a flag; it is on by default now
   struct dirent *ent;
+
   // TODO: Error checking when calling `readdir`
-  // TODO: Handle when input is just a file
   while((ent = readdir(dirp))) {
-    //TODO: `ls` uses some kind of padding, not tab characters
-    printf("%s\t", ent->d_name);
+    print_entry(ent);
   }
-  printf("\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -24,6 +34,7 @@ int main(int argc, char *argv[]) {
   char *path = (argc == 1) ? DEFAULT_DIR : argv[1];
   DIR *dirp = opendir(path);
 
+  // TODO: Handle when input is just a file
   if (dirp == NULL) {
     printf("%s: %s: %s\n", argv[0], path, strerror(errno));
     return 1;
