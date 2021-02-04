@@ -48,18 +48,26 @@ int collect_contents(DIR *dirp, LSENT *entries, unsigned char flags) {
 }
 
 int main(int argc, char *argv[]) {
-  // TODO: This will have to change when introducing optional flags
   unsigned char flags = 0;
-  char path[1024];
+  char *path;
+  char c;
 
-  if (argc == 1) {
-    strcpy(path, DEFAULT_DIR);
-  } else if (argv[1][0] == '-') {
-    flags |= SHOW_HIDDEN;
-    strcpy(path, argc == 2 ? DEFAULT_DIR : argv[2]);
-  } else {
-    strcpy(path, argv[1]);
+  // Flag parsing lifted from K&R C, Section 5.10 (pg. 117)
+  while (--argc > 0 && (*++argv)[0] == '-') {
+    while ((c = *++argv[0])) {
+      switch(c) {
+        case 'a':
+          flags |= SHOW_HIDDEN;
+          break;
+        default:
+          printf("myls: illegal option %c\n", c);
+          argc = 0;
+          break;
+      }
+    }
   }
+
+  path = argc == 0 ? DEFAULT_DIR : *argv;
 
   DIR *dirp = opendir(path);
   LSENT *entries = malloc(MAX_ENTRIES * sizeof(LSENT));
@@ -67,7 +75,7 @@ int main(int argc, char *argv[]) {
 
   // TODO: Handle when input is just a file
   if (dirp == NULL) {
-    printf("%s: %s: %s\n", argv[0], path, strerror(errno));
+    printf("myls: %s: %s\n", path, strerror(errno));
     return 1;
   }
 
