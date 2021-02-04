@@ -8,7 +8,8 @@
 
 #define DEFAULT_DIR "."
 #define MAX_ENTRIES 65535
-#define SHOW_HIDDEN 0b1
+#define SHOW_HIDDEN 0b01
+#define SHOW_SIZE   0b10
 
 typedef struct lsent {
   char name[1024];
@@ -16,8 +17,12 @@ typedef struct lsent {
   off_t size;
 } LSENT;
 
-void print_entry(LSENT *entry) {
-  printf("%3llu %-9s\n", entry->blocks, entry->name);
+void print_entry(LSENT *entry, unsigned char flags) {
+  if (flags & SHOW_SIZE) {
+    printf("%3llu %-9s\n", entry->blocks, entry->name);
+  } else {
+    printf("%-9s\n", entry->name);
+  }
 }
 
 int collect_contents(DIR *dirp, LSENT *entries, unsigned char flags) {
@@ -59,6 +64,9 @@ int main(int argc, char *argv[]) {
         case 'a':
           flags |= SHOW_HIDDEN;
           break;
+        case 's':
+          flags |= SHOW_SIZE;
+          break;
         default:
           printf("myls: illegal option %c\n", c);
           argc = 0;
@@ -82,7 +90,7 @@ int main(int argc, char *argv[]) {
   // TODO: Sort entries like `ls` by default
   num_entries = collect_contents(dirp, entries, flags);
   for (int i = 0; i < num_entries; i++) {
-    print_entry(&entries[i]);
+    print_entry(&entries[i], flags);
   }
 
   free(entries);
