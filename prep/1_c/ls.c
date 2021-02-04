@@ -23,12 +23,13 @@ void print_entry(LSENT *entry) {
 int collect_contents(DIR *dirp, LSENT *entries, unsigned char flags) {
   // TODO: Error checking when calling `readdir`
   struct dirent *direntp;
-
+  int dir_fd = dirfd(dirp);
   LSENT *start = entries;
+
   while((direntp = readdir(dirp))) {
     struct stat filestats;
 
-    if (stat(direntp->d_name, &filestats)) {
+    if (fstatat(dir_fd, direntp->d_name, &filestats, 0)) {
       printf("%s\n", strerror(errno));
       exit(1);
     }
