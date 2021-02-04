@@ -8,6 +8,7 @@
 
 #define DEFAULT_DIR "."
 #define MAX_ENTRIES 65535
+#define SHOW_HIDDEN 0b1
 
 typedef struct lsent {
   char name[1024];
@@ -19,8 +20,7 @@ void print_entry(LSENT *entry) {
   printf("%3llu %-9s\n", entry->blocks, entry->name);
 }
 
-int collect_contents(DIR *dirp, LSENT *entries) {
-  // TODO: Implement the -a flag; it is on by default now
+int collect_contents(DIR *dirp, LSENT *entries, unsigned char flags) {
   // TODO: Error checking when calling `readdir`
   struct dirent *direntp;
 
@@ -31,6 +31,10 @@ int collect_contents(DIR *dirp, LSENT *entries) {
     if (stat(direntp->d_name, &filestats)) {
       printf("%s\n", strerror(errno));
       exit(1);
+    }
+
+    if (direntp->d_name[0] == '.' && !(flags & SHOW_HIDDEN)) {
+      continue;
     }
 
     strcpy(entries->name, direntp->d_name);
@@ -44,7 +48,18 @@ int collect_contents(DIR *dirp, LSENT *entries) {
 
 int main(int argc, char *argv[]) {
   // TODO: This will have to change when introducing optional flags
-  char *path = (argc == 1) ? DEFAULT_DIR : argv[1];
+  unsigned char flags = 0;
+  char path[1024];
+
+  if (argc == 1) {
+    strcpy(path, DEFAULT_DIR);
+  } else if (argv[1][0] == '-') {
+    flags |= SHOW_HIDDEN;
+    strcpy(path, argc == 2 ? DEFAULT_DIR : argv[2]);
+  } else {
+    strcpy(path, argv[1]);
+  }
+
   DIR *dirp = opendir(path);
   LSENT *entries = malloc(MAX_ENTRIES * sizeof(LSENT));
   int num_entries;
@@ -56,7 +71,7 @@ int main(int argc, char *argv[]) {
   }
 
   // TODO: Sort entries like `ls` by default
-  num_entries = collect_contents(dirp, entries);
+  num_entries = collect_contents(dirp, entries, flags);
   for (int i = 0; i < num_entries; i++) {
     print_entry(&entries[i]);
   }
