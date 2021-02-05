@@ -6,11 +6,12 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-#define DEFAULT_DIR "."
-#define MAX_ENTRIES 65535
-#define SHOW_HIDDEN 0b001
-#define SHOW_SIZE   0b010
-#define NEW_LINES   0b100
+#define DEFAULT_DIR    "."
+#define MAX_ENTRIES    65535
+#define SHOW_HIDDEN    0b0001
+#define SHOW_SIZE      0b0010
+#define SHOW_KILOBYTES 0b0100
+#define NEW_LINES      0b1000
 
 typedef struct lsent {
   char name[1024];
@@ -25,15 +26,16 @@ struct ls_stats {
 
 void print_summary(struct ls_stats *summary, unsigned char flags) {
   if (flags & SHOW_SIZE) {
-    printf("total %llu\n", summary->total_blocks);
+    int size_scale = (flags & SHOW_KILOBYTES) ? 2 : 1;
+    printf("total %llu\n", summary->total_blocks / size_scale);
   }
 }
 
 void print_entry(LSENT *entry, unsigned char flags) {
   char sep = (flags & NEW_LINES) ? '\n' : ' ';
-
   if (flags & SHOW_SIZE) {
-    printf("%3llu %-9s%c", entry->blocks, entry->name, sep);
+    int size_scale = (flags & SHOW_KILOBYTES) ? 2 : 1;
+    printf("%3llu %-9s%c", entry->blocks / size_scale, entry->name, sep);
   } else {
     printf("%-9s%c", entry->name, sep);
   }
@@ -79,6 +81,9 @@ int main(int argc, char *argv[]) {
       switch(c) {
         case 'a':
           flags |= SHOW_HIDDEN;
+          break;
+        case 'k':
+          flags |= SHOW_KILOBYTES;
           break;
         case 's':
           flags |= SHOW_SIZE;
