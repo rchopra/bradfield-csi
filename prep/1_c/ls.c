@@ -8,10 +8,11 @@
 
 #define DEFAULT_DIR    "."
 #define MAX_ENTRIES    65535
-#define SHOW_HIDDEN    0b0001
-#define SHOW_SIZE      0b0010
-#define SHOW_KILOBYTES 0b0100
-#define NEW_LINES      0b1000
+#define SHOW_HIDDEN    0b00001
+#define SHOW_SIZE      0b00010
+#define SHOW_KILOBYTES 0b00100
+#define NEW_LINES      0b01000
+#define SORT_BY_SIZE   0b10000
 
 typedef struct lsent {
   char name[1024];
@@ -23,6 +24,12 @@ struct ls_stats {
   blkcnt_t total_blocks;
   off_t total_size;
 };
+
+int compare_by_size(const void *first, const void *second) {
+  off_t fsize = ((LSENT *)first)->size;
+  off_t ssize = ((LSENT *)second)->size;
+  return (fsize < ssize) - (fsize > ssize);
+}
 
 void print_summary(struct ls_stats *summary, unsigned char flags) {
   if (flags & SHOW_SIZE) {
@@ -88,6 +95,9 @@ int main(int argc, char *argv[]) {
         case 's':
           flags |= SHOW_SIZE;
           break;
+        case 'S':
+          flags |= SORT_BY_SIZE;
+          break;
         case '1':
           flags |= NEW_LINES;
           break;
@@ -113,8 +123,10 @@ int main(int argc, char *argv[]) {
 
   struct ls_stats summary = { 0, 0 };
 
-  // TODO: Sort entries like `ls` by default
   num_entries = collect_contents(dirp, entries, &summary, flags);
+  if (flags & SORT_BY_SIZE) {
+    qsort(entries, num_entries, sizeof(LSENT), compare_by_size);
+  }
 
   print_summary(&summary, flags);
   for (int i = 0; i < num_entries; i++) {
