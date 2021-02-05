@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-#define DEFAULT_DIR    "."
-#define MAX_ENTRIES    65535
+#define MAX_DIR_ENTRIES 65535
+
+// Bit masks for ls flags
 #define SHOW_HIDDEN    0b00001
 #define SHOW_SIZE      0b00010
 #define SHOW_KILOBYTES 0b00100
@@ -17,7 +18,7 @@
 typedef struct lsent {
   char name[1024];
   blkcnt_t blocks;
-  off_t size;
+  off_t bytes;
 } LSENT;
 
 struct ls_stats {
@@ -25,57 +26,11 @@ struct ls_stats {
   off_t total_size;
 };
 
-int compare_by_size(const void *first, const void *second) {
-  off_t fsize = ((LSENT *)first)->size;
-  off_t ssize = ((LSENT *)second)->size;
-  return (fsize < ssize) - (fsize > ssize);
-}
-
-void print_summary(struct ls_stats *summary, unsigned char flags) {
-  if (flags & SHOW_SIZE) {
-    int size_scale = (flags & SHOW_KILOBYTES) ? 2 : 1;
-    printf("total %llu\n", summary->total_blocks / size_scale);
-  }
-}
-
-void print_entry(LSENT *entry, unsigned char flags) {
-  char sep = (flags & NEW_LINES) ? '\n' : ' ';
-  if (flags & SHOW_SIZE) {
-    int size_scale = (flags & SHOW_KILOBYTES) ? 2 : 1;
-    printf("%3llu %-9s%c", entry->blocks / size_scale, entry->name, sep);
-  } else {
-    printf("%-9s%c", entry->name, sep);
-  }
-}
-
-int collect_contents(DIR *dirp, LSENT *entries, struct ls_stats *summary, unsigned char flags) {
-  // TODO: Error checking when calling `readdir`
-  struct dirent *direntp;
-  int dir_fd = dirfd(dirp);
-  LSENT *start = entries;
-
-  while((direntp = readdir(dirp))) {
-    struct stat filestats;
-
-    if (fstatat(dir_fd, direntp->d_name, &filestats, 0)) {
-      printf("%s\n", strerror(errno));
-      exit(1);
-    }
-
-    if (direntp->d_name[0] == '.' && !(flags & SHOW_HIDDEN)) {
-      continue;
-    }
-
-    strcpy(entries->name, direntp->d_name);
-    entries->blocks = filestats.st_blocks;
-    entries->size   = filestats.st_size;
-    summary->total_blocks += entries->blocks;
-    summary->total_size += entries->size;
-    entries++;
-  }
-
-  return entries - start;
-}
+// Function prototypes
+void print_summary(struct ls_stats *summary, unsigned char flags);
+void print_entry(LSENT *entry, unsigned char flags);
+int compare_by_size(const void *first, const void *second);
+int collect_contents(DIR *dirp, LSENT *entries, struct ls_stats *summary, unsigned char flags);
 
 int main(int argc, char *argv[]) {
   unsigned char flags = 0;
@@ -109,10 +64,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  path = argc == 0 ? DEFAULT_DIR : *argv;
+  path = argc == 0 ? "." : *argv;
 
   DIR *dirp = opendir(path);
-  LSENT *entries = malloc(MAX_ENTRIES * sizeof(LSENT));
+  LSENT *entries = malloc(MAX_DIR_ENTRIES * sizeof(LSENT));
   int num_entries;
 
   // TODO: Handle when input is just a file
@@ -139,4 +94,56 @@ int main(int argc, char *argv[]) {
   free(entries);
   closedir(dirp);
   return 0;
+}
+
+int collect_contents(DIR *dirp, LSENT *entries, struct ls_stats *summary, unsigned char flags) {
+  // TODO: Error checking when calling `readdir`
+  struct dirent *direntp;
+  int dir_fd = dirfd(dirp);
+  LSENT *start = entries;
+
+  while((direntp = readdir(dirp))) {
+    struct stat filestats;
+
+    if (fstatat(dir_fd, direntp->d_name, &filestats, 0)) {
+      printf("%s\n", strerror(errno));
+      exit(1);
+    }
+
+    if (direntp->d_name[0] == '.' && !(flags & SHOW_HIDDEN)) {
+      continue;
+    }
+
+    strcpy(entries->name, direntp->d_name);
+    entries->blocks        = filestats.st_blocks;
+    entries->bytes         = filestats.st_size;
+    summary->total_blocks += entries->blocks;
+    summary->total_size   += entries->bytes;
+    entries++;
+  }
+
+  return entries - start;
+}
+
+void print_summary(struct ls_stats *summary, unsigned char flags) {
+  if (flags & SHOW_SIZE) {
+    int size_scale = (flags & SHOW_KILOBYTES) ? 2 : 1;
+    printf("total %llu\n", summary->total_blocks / size_scale);
+  }
+}
+
+void print_entry(LSENT *entry, unsigned char flags) {
+  char sep = (flags & NEW_LINES) ? '\n' : ' ';
+  if (flags & SHOW_SIZE) {
+    int size_scale = (flags & SHOW_KILOBYTES) ? 2 : 1;
+    printf("%3llu %-9s%c", entry->blocks / size_scale, entry->name, sep);
+  } else {
+    printf("%-9s%c", entry->name, sep);
+  }
+}
+
+int compare_by_size(const void *first, const void *second) {
+  off_t fsize = ((LSENT *)first)->bytes;
+  off_t ssize = ((LSENT *)second)->bytes;
+  return (fsize < ssize) - (fsize > ssize);
 }
