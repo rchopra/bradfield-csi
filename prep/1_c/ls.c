@@ -18,6 +18,17 @@ typedef struct lsent {
   off_t size;
 } LSENT;
 
+struct ls_stats {
+  blkcnt_t total_blocks;
+  off_t total_size;
+};
+
+void print_summary(struct ls_stats *summary, unsigned char flags) {
+  if (flags & SHOW_SIZE) {
+    printf("total %llu\n", summary->total_blocks);
+  }
+}
+
 void print_entry(LSENT *entry, unsigned char flags) {
   char sep = (flags & NEW_LINES) ? '\n' : ' ';
 
@@ -28,7 +39,7 @@ void print_entry(LSENT *entry, unsigned char flags) {
   }
 }
 
-int collect_contents(DIR *dirp, LSENT *entries, unsigned char flags) {
+int collect_contents(DIR *dirp, LSENT *entries, struct ls_stats *summary, unsigned char flags) {
   // TODO: Error checking when calling `readdir`
   struct dirent *direntp;
   int dir_fd = dirfd(dirp);
@@ -49,6 +60,8 @@ int collect_contents(DIR *dirp, LSENT *entries, unsigned char flags) {
     strcpy(entries->name, direntp->d_name);
     entries->blocks = filestats.st_blocks;
     entries->size   = filestats.st_size;
+    summary->total_blocks += entries->blocks;
+    summary->total_size += entries->size;
     entries++;
   }
 
@@ -93,8 +106,12 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  struct ls_stats summary = { 0, 0 };
+
   // TODO: Sort entries like `ls` by default
-  num_entries = collect_contents(dirp, entries, flags);
+  num_entries = collect_contents(dirp, entries, &summary, flags);
+
+  print_summary(&summary, flags);
   for (int i = 0; i < num_entries; i++) {
     print_entry(&entries[i], flags);
   }
