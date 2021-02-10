@@ -1,7 +1,27 @@
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
+)
+
+type XKCDComic struct {
+	Num        int
+	Title      string
+	Transcript string
+}
 
 func main() {
-	fmt.Println("Hello, 世界")
+	contents, err := ioutil.ReadFile("comics.json")
+	if err != nil {
+		log.Fatalf("ioutil.ReadFile failed: %v", err)
+	}
+
+	var comic XKCDComic
+	if err := json.Unmarshal(contents, &comic); err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+	fmt.Printf("Comic: \n%v", comic)
 }
