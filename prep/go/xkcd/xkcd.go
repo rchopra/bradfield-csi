@@ -1,11 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"io"
+	"net/http"
+	"os"
 )
+
+const xkcdURL = "https://xkcd.com/"
 
 type XKCDComic struct {
 	Num        int
@@ -14,14 +16,22 @@ type XKCDComic struct {
 }
 
 func main() {
-	contents, err := ioutil.ReadFile("comics.json")
+	downloadComic("570")
+}
+
+func downloadComic(comicNum string) error {
+	resp, err := http.Get(xkcdURL + comicNum + "/info.0.json")
 	if err != nil {
-		log.Fatalf("ioutil.ReadFile failed: %v", err)
+		return err
 	}
 
-	var comic XKCDComic
-	if err := json.Unmarshal(contents, &comic); err != nil {
-		log.Fatalf("Error parsing JSON: %v", err)
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return fmt.Errorf("Failed to download comic #%s: %s", comicNum, resp.Status)
 	}
-	fmt.Printf("Comic: \n%v", comic)
+
+	out, err := os.Create("data/" + comicNum + ".json")
+	io.Copy(out, resp.Body)
+
+	return nil
 }
