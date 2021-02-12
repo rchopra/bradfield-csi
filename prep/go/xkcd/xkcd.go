@@ -68,7 +68,8 @@ func buildSearchIndex() map[string]map[int]bool {
 			log.Fatalf("Error parsing JSON: %v", err)
 		}
 
-		for _, word := range strings.Split(comic.Transcript, " ") {
+		searchableText := comic.Title + comic.Transcript
+		for _, word := range strings.Split(searchableText, " ") {
 			if index[word] == nil {
 				index[word] = make(map[int]bool)
 			}
