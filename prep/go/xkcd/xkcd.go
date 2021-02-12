@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +17,13 @@ type XKCDComic struct {
 }
 
 func main() {
-	downloadComic("570")
+	downloadFlag := flag.Bool("d", false, "Download comics data")
+
+	flag.Parse()
+
+	if *downloadFlag {
+		downloadComic("570")
+	}
 }
 
 func downloadComic(comicNum string) error {
