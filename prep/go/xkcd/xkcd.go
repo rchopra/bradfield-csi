@@ -30,7 +30,9 @@ func main() {
 		downloadComic("570")
 	}
 	index := buildSearchIndex()
-	fmt.Printf("%d terms in the index.\n", len(index))
+
+	term := os.Args[len(os.Args)-1]
+	search(term, index)
 }
 
 func downloadComic(comicNum string) error {
@@ -78,4 +80,15 @@ func buildSearchIndex() map[string]map[int]bool {
 	}
 
 	return index
+}
+
+func search(term string, index map[string]map[int]bool) {
+	if index[term] == nil {
+		fmt.Printf("Search term: '%s' not found.\n", term)
+		return
+	}
+
+	for comicNum, _ := range index[term] {
+		fmt.Printf("%v\n", comicNum)
+	}
 }
