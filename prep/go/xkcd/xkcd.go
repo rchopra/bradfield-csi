@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -28,15 +29,27 @@ func main() {
 	flag.Parse()
 
 	if *downloadFlag {
-		comicNum := "568"
-		url := strings.Join([]string{baseURL, comicNum, jsonPath}, "/")
-		saveLoc := dataDir + comicNum + ".json"
-		downloadComic(url, saveLoc)
+		downloadAllComics()
 	}
 	index := buildSearchIndex()
 
 	term := os.Args[len(os.Args)-1]
 	search(term, index)
+}
+
+func downloadAllComics() {
+	maxComicNum := 3
+	for i := maxComicNum; i > 0; i-- {
+		comicNum := strconv.Itoa(i)
+		saveLoc := dataDir + comicNum + ".json"
+
+		// Only download a comic if it does not already exist on disk
+		if _, err := os.Stat(saveLoc); os.IsNotExist(err) {
+			url := strings.Join([]string{baseURL, comicNum, jsonPath}, "/")
+			fmt.Printf("Downloading comic #%s\n", comicNum)
+			downloadComic(url, saveLoc)
+		}
+	}
 }
 
 func downloadComic(url string, saveLoc string) error {
