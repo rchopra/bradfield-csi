@@ -113,7 +113,8 @@ func buildSearchIndex() map[string]map[int]bool {
 	for _, file := range files {
 		comic := loadComicFromFile(file.Name())
 		searchableText := comic.Title + comic.Transcript
-		for _, word := range strings.Split(searchableText, " ") {
+		cleanedText := cleanText(searchableText)
+		for _, word := range strings.Split(cleanedText, " ") {
 			if index[word] == nil {
 				index[word] = make(map[int]bool)
 			}
@@ -138,14 +139,26 @@ func loadComicFromFile(fileName string) *XKCDComic {
 	return &comic
 }
 
+func cleanText(text string) string {
+	text = strings.ToLower(text)
+	return text
+}
+
 func search(term string, index map[string]map[int]bool) {
-	if index[term] == nil {
+	cleanedTerm := cleanText(term)
+	results, found := index[cleanedTerm]
+	if !found {
 		fmt.Printf("Search term: '%s' not found.\n", term)
 		return
 	}
 
-	fmt.Printf("Results for '%s'\n", term)
-	for num, _ := range index[term] {
+	resultQuantifier := "result"
+	numResults := len(results)
+	if numResults != 1 {
+		resultQuantifier += "s"
+	}
+	fmt.Printf("%d %s for '%s'\n", len(results), resultQuantifier, term)
+	for num, _ := range results {
 		printSearchResult(num)
 	}
 }
