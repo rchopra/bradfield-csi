@@ -111,16 +111,7 @@ func buildSearchIndex() map[string]map[int]bool {
 
 	index := make(map[string]map[int]bool)
 	for _, file := range files {
-		data, err := ioutil.ReadFile(dataDir + file.Name())
-		if err != nil {
-			log.Fatalf("Failed to open %v", err)
-		}
-
-		var comic XKCDComic
-		if err := json.Unmarshal(data, &comic); err != nil {
-			log.Fatalf("Error parsing JSON: %v", err)
-		}
-
+		comic := loadComicFromFile(file.Name())
 		searchableText := comic.Title + comic.Transcript
 		for _, word := range strings.Split(searchableText, " ") {
 			if index[word] == nil {
@@ -133,13 +124,36 @@ func buildSearchIndex() map[string]map[int]bool {
 	return index
 }
 
+func loadComicFromFile(fileName string) *XKCDComic {
+	data, err := ioutil.ReadFile(dataDir + fileName)
+	if err != nil {
+		log.Fatalf("Failed to open %v", err)
+	}
+
+	var comic XKCDComic
+	if err := json.Unmarshal(data, &comic); err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+
+	return &comic
+}
+
 func search(term string, index map[string]map[int]bool) {
 	if index[term] == nil {
 		fmt.Printf("Search term: '%s' not found.\n", term)
 		return
 	}
 
-	for comicNum, _ := range index[term] {
-		fmt.Printf("%v\n", comicNum)
+	fmt.Printf("Results for '%s'\n", term)
+	for num, _ := range index[term] {
+		printSearchResult(num)
 	}
+}
+
+func printSearchResult(num int) {
+	comicNum := strconv.Itoa(num)
+	comic := loadComicFromFile(comicNum + ".json")
+	url := comicUrl(comicNum)
+	padding := fmt.Sprintf("%*s", len(url), "=")
+	fmt.Printf("\n%s\n%s\n%s\n", url, strings.ReplaceAll(padding, " ", "="), comic.Transcript)
 }
