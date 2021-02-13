@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -115,6 +116,7 @@ func buildSearchIndex() map[string]map[int]bool {
 		searchableText := comic.Title + comic.Transcript
 		cleanedText := cleanText(searchableText)
 		for _, word := range strings.Split(cleanedText, " ") {
+			word = strings.TrimSpace(word)
 			if index[word] == nil {
 				index[word] = make(map[int]bool)
 			}
@@ -141,6 +143,15 @@ func loadComicFromFile(fileName string) *XKCDComic {
 
 func cleanText(text string) string {
 	text = strings.ToLower(text)
+	text = strings.ReplaceAll(text, "\n", " ")
+
+	// There's always a "Title text:" description line
+	text = strings.ReplaceAll(text, "title text:", "")
+
+	// Remove all non-alphanumeric characters
+	re := regexp.MustCompile(`[^a-zA-Z\d\s]`)
+	text = re.ReplaceAllLiteralString(text, " ")
+
 	return text
 }
 
