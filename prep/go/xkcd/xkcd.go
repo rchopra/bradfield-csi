@@ -16,6 +16,7 @@ import (
 const baseURL = "https://xkcd.com"
 const jsonPath = "info.0.json"
 const dataDir = "data/"
+const defaultComicNum = 2423
 
 type XKCDComic struct {
 	Num        int
@@ -38,18 +39,34 @@ func main() {
 }
 
 func downloadAllComics() {
-	maxComicNum := 3
+	body, err := requestComic(comicUrl(""))
+	var maxComicNum int
+	if err != nil {
+		fmt.Printf("Could not get most recent comic. Defaulting to #%d\n", defaultComicNum)
+		maxComicNum = defaultComicNum
+	} else {
+		var comic XKCDComic
+		if err := json.NewDecoder(body).Decode(&comic); err != nil {
+			log.Fatalf("Error parsing JSON: %v", err)
+		}
+		maxComicNum = comic.Num
+	}
+
 	for i := maxComicNum; i > 0; i-- {
 		comicNum := strconv.Itoa(i)
 		saveLoc := dataDir + comicNum + ".json"
 
-		// Only download a comic if it does not already exist on disk
+		// Download a comic only if it is not already on disk
 		if _, err := os.Stat(saveLoc); os.IsNotExist(err) {
-			url := strings.Join([]string{baseURL, comicNum, jsonPath}, "/")
-			fmt.Printf("Downloading comic #%s\n", comicNum)
-			downloadComic(url, saveLoc)
+			fmt.Printf("Downloading xkcd #%s\n", comicNum)
+			downloadErr := downloadComic(comicUrl(comicNum), saveLoc)
+			fmt.Printf("%v", downloadErr)
 		}
 	}
+}
+
+func comicUrl(comicNum string) string {
+	return strings.Join([]string{baseURL, comicNum, jsonPath}, "/")
 }
 
 func downloadComic(url string, saveLoc string) error {
@@ -65,12 +82,12 @@ func downloadComic(url string, saveLoc string) error {
 func requestComic(url string) (io.ReadCloser, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to download %s: %s\n", url, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("Failed to download comic at url#%s: %s", url, resp.Status)
+		return nil, fmt.Errorf("Failed to download %s: %s\n", url, resp.Status)
 	}
 
 	return resp.Body, nil
