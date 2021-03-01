@@ -14,10 +14,12 @@ import (
 	"strings"
 )
 
-const baseURL = "https://xkcd.com"
-const jsonPath = "info.0.json"
-const dataDir = "data/"
-const defaultComicNum = 2423
+const (
+	baseURL         = "https://xkcd.com"
+	jsonPath        = "info.0.json"
+	dataDir         = "data/"
+	defaultComicNum = 2423
+)
 
 type XKCDComic struct {
 	Num        int
