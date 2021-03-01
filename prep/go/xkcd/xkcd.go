@@ -21,7 +21,7 @@ const (
 	defaultComicNum = 2423
 )
 
-type XKCDComic struct {
+type Comic struct {
 	Num        int
 	Title      string
 	Transcript string
@@ -48,7 +48,7 @@ func downloadAllComics() {
 		fmt.Printf("Could not get most recent comic. Defaulting to #%d\n", defaultComicNum)
 		maxComicNum = defaultComicNum
 	} else {
-		var comic XKCDComic
+		var comic Comic
 		if err := json.NewDecoder(body).Decode(&comic); err != nil {
 			log.Fatalf("Error parsing JSON: %v", err)
 		}
@@ -129,13 +129,13 @@ func buildSearchIndex() map[string]map[int]bool {
 	return index
 }
 
-func loadComicFromFile(fileName string) *XKCDComic {
+func loadComicFromFile(fileName string) *Comic {
 	data, err := ioutil.ReadFile(dataDir + fileName)
 	if err != nil {
 		log.Fatalf("Failed to open %v", err)
 	}
 
-	var comic XKCDComic
+	var comic Comic
 	if err := json.Unmarshal(data, &comic); err != nil {
 		log.Fatalf("Error parsing JSON: %v", err)
 	}
