@@ -27,6 +27,8 @@ type Comic struct {
 	Transcript string
 }
 
+type searchIndex map[string]map[int]bool
+
 func main() {
 	downloadFlag := flag.Bool("d", false, "Download comics data")
 
@@ -117,13 +119,13 @@ func saveComic(location string, data io.ReadCloser) error {
 	return err
 }
 
-func buildSearchIndex() map[string]map[int]bool {
+func buildSearchIndex() searchIndex {
 	files, err := ioutil.ReadDir(dataDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	index := make(map[string]map[int]bool)
+	index := make(searchIndex)
 	for _, file := range files {
 		comic := loadComicFromFile(file.Name())
 		searchableText := comic.Title + comic.Transcript
@@ -168,7 +170,7 @@ func cleanText(text string) string {
 	return text
 }
 
-func search(term string, index map[string]map[int]bool) {
+func search(term string, index searchIndex) {
 	cleanedTerm := cleanText(term)
 	results, found := index[cleanedTerm]
 	if !found {
