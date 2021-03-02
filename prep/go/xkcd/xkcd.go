@@ -42,30 +42,37 @@ func main() {
 }
 
 func downloadAllComics() {
-	body, err := requestComic(comicUrl(""))
-	var maxComicNum int
-	if err != nil {
-		fmt.Printf("Could not get most recent comic. Defaulting to #%d\n", defaultComicNum)
-		maxComicNum = defaultComicNum
-	} else {
-		var comic Comic
-		if err := json.NewDecoder(body).Decode(&comic); err != nil {
-			log.Fatalf("Error parsing JSON: %v", err)
+	for i := getMaxComicNum(); i > 0; i-- {
+		// This is an Easter Egg -- there is no Comic #404
+		if i == 404 {
+			continue
 		}
-		maxComicNum = comic.Num
-	}
-
-	for i := maxComicNum; i > 0; i-- {
 		comicNum := strconv.Itoa(i)
 		saveLoc := dataDir + comicNum + ".json"
 
 		// Download a comic only if it is not already on disk
 		if _, err := os.Stat(saveLoc); os.IsNotExist(err) {
-			fmt.Printf("Downloading xkcd #%s\n", comicNum)
-			downloadErr := downloadComic(comicUrl(comicNum), saveLoc)
-			fmt.Printf("%v", downloadErr)
+			if err = downloadComic(comicUrl(comicNum), saveLoc); err != nil {
+				fmt.Println(err.Error())
+			}
 		}
 	}
+}
+
+func getMaxComicNum() int {
+	// The most recent comic is at: xkcd.com/info.0.json, so a blank string will get it for us
+	body, err := requestComic(comicUrl(""))
+	if err != nil {
+		fmt.Printf("Could not get most recent comic. Defaulting to #%d\n", defaultComicNum)
+		return defaultComicNum
+	}
+
+	var comic Comic
+	if err = json.NewDecoder(body).Decode(&comic); err != nil {
+		fmt.Printf("Error parsing JSON for most recent comic. Defaulting to #%d\n", defaultComicNum)
+		return defaultComicNum
+	}
+	return comic.Num
 }
 
 func comicUrl(comicNum string) string {
@@ -73,37 +80,41 @@ func comicUrl(comicNum string) string {
 }
 
 func downloadComic(url string, saveLoc string) error {
-	data, reqErr := requestComic(url)
-	if reqErr != nil {
-		return reqErr
+	fmt.Printf("Downloading %s\n", url)
+	data, err := requestComic(url)
+	if err != nil {
+		return err
 	}
 
-	saveErr := saveComic(saveLoc, data)
-	return saveErr
+	err = saveComic(saveLoc, data)
+	if err != nil {
+		return fmt.Errorf("Error saving comic to %s: %s\n", saveLoc, err)
+	}
+	return nil
 }
 
 func requestComic(url string) (io.ReadCloser, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to download %s: %s\n", url, err)
+		return nil, fmt.Errorf("Error downloading %s: %s\n", url, err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		return nil, fmt.Errorf("Failed to download %s: %s\n", url, resp.Status)
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("Error downloading %s: %s\n", url, resp.Status)
 	}
 
 	return resp.Body, nil
 }
 
 func saveComic(location string, data io.ReadCloser) error {
-	out, createErr := os.Create(location)
-	if createErr != nil {
-		return createErr
+	out, err := os.Create(location)
+	if err != nil {
+		return err
 	}
 
-	_, copyErr := io.Copy(out, data)
-	return copyErr
+	_, err = io.Copy(out, data)
+	return err
 }
 
 func buildSearchIndex() map[string]map[int]bool {
