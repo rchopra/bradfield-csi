@@ -32,3 +32,12 @@ func TestSearch(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildSearchIndex(t *testing.T) {
+}
+
+func TestPrintSearchResults(t *testing.T) {
+}
+
+func TestDownloadAllComics(t *testing.T) {
+}
