@@ -27,9 +27,9 @@ type Comic struct {
 	Transcript string
 }
 
-type searchIndex map[string]map[int]bool
-
 type resultSet map[int]bool
+
+type searchIndex map[string]resultSet
 
 func main() {
 	downloadFlag := flag.Bool("d", false, "Download comics data")
@@ -186,7 +186,7 @@ func cleanText(text string) string {
 
 	// Remove all non-alphanumeric characters
 	re := regexp.MustCompile(`[^a-zA-Z\d\s]`)
-	text = re.ReplaceAllLiteralString(text, " ")
+	text = re.ReplaceAllLiteralString(text, "")
 
 	return text
 }
