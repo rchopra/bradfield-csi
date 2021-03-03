@@ -37,9 +37,16 @@ func main() {
 	if *downloadFlag {
 		downloadAllComics()
 	}
+
 	index := buildSearchIndex()
 
-	term := os.Args[len(os.Args)-1]
+	// Grab the first non-flag argument
+	term := flag.Arg(0)
+	if term == "" {
+		fmt.Printf("No search term provided.\n")
+		flag.PrintDefaults()
+		return
+	}
 	search(term, index)
 }
 
