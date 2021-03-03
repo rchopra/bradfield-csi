@@ -29,6 +29,8 @@ type Comic struct {
 
 type searchIndex map[string]map[int]bool
 
+type resultSet map[int]bool
+
 func main() {
 	downloadFlag := flag.Bool("d", false, "Download comics data")
 
@@ -47,7 +49,9 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	search(term, index)
+
+	results := search(term, index)
+	printSearchResults(results, term)
 }
 
 func downloadAllComics() {
@@ -66,6 +70,39 @@ func downloadAllComics() {
 			}
 		}
 	}
+}
+
+func buildSearchIndex() searchIndex {
+	files, err := ioutil.ReadDir(dataDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	index := make(searchIndex)
+	for _, file := range files {
+		comic := loadComicFromFile(file.Name())
+		searchableText := comic.Title + comic.Transcript
+		cleanedText := cleanText(searchableText)
+		for _, word := range strings.Split(cleanedText, " ") {
+			word = strings.TrimSpace(word)
+			if index[word] == nil {
+				index[word] = make(map[int]bool)
+			}
+			index[word][comic.Num] = true
+		}
+	}
+
+	return index
+}
+
+func search(term string, index searchIndex) resultSet {
+	cleanedTerm := cleanText(term)
+	results, found := index[cleanedTerm]
+	if !found {
+		fmt.Printf("Search term: '%s' not found.\n", term)
+	}
+
+	return results
 }
 
 func getMaxComicNum() int {
@@ -126,29 +163,6 @@ func saveComic(location string, data io.ReadCloser) error {
 	return err
 }
 
-func buildSearchIndex() searchIndex {
-	files, err := ioutil.ReadDir(dataDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	index := make(searchIndex)
-	for _, file := range files {
-		comic := loadComicFromFile(file.Name())
-		searchableText := comic.Title + comic.Transcript
-		cleanedText := cleanText(searchableText)
-		for _, word := range strings.Split(cleanedText, " ") {
-			word = strings.TrimSpace(word)
-			if index[word] == nil {
-				index[word] = make(map[int]bool)
-			}
-			index[word][comic.Num] = true
-		}
-	}
-
-	return index
-}
-
 func loadComicFromFile(fileName string) *Comic {
 	data, err := ioutil.ReadFile(dataDir + fileName)
 	if err != nil {
@@ -177,29 +191,19 @@ func cleanText(text string) string {
 	return text
 }
 
-func search(term string, index searchIndex) {
-	cleanedTerm := cleanText(term)
-	results, found := index[cleanedTerm]
-	if !found {
-		fmt.Printf("Search term: '%s' not found.\n", term)
-		return
-	}
-
+func printSearchResults(results resultSet, term string) {
 	resultQuantifier := "result"
 	numResults := len(results)
 	if numResults != 1 {
 		resultQuantifier += "s"
 	}
 	fmt.Printf("%d %s for '%s'\n", len(results), resultQuantifier, term)
-	for num, _ := range results {
-		printSearchResult(num)
-	}
-}
 
-func printSearchResult(num int) {
-	comicNum := strconv.Itoa(num)
-	comic := loadComicFromFile(comicNum + ".json")
-	url := comicUrl(comicNum)
-	padding := fmt.Sprintf("%*s", len(url), "=")
-	fmt.Printf("\n%s\n%s\n%s\n", url, strings.ReplaceAll(padding, " ", "="), comic.Transcript)
+	for num, _ := range results {
+		comicNum := strconv.Itoa(num)
+		comic := loadComicFromFile(comicNum + ".json")
+		url := comicUrl(comicNum)
+		padding := fmt.Sprintf("%*s", len(url), "=")
+		fmt.Printf("\n%s\n%s\n%s\n", url, strings.ReplaceAll(padding, " ", "="), comic.Transcript)
+	}
 }
