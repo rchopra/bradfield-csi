@@ -81,7 +81,7 @@ func buildSearchIndex(dir string) searchIndex {
 	index := make(searchIndex)
 	for _, file := range files {
 		comic := loadComicFromFile(dir, file.Name())
-		searchableText := comic.Title + comic.Transcript
+		searchableText := comic.Title + "\n" + comic.Transcript
 		cleanedText := cleanText(searchableText)
 		for _, word := range strings.Split(cleanedText, " ") {
 			word = strings.TrimSpace(word)
@@ -179,7 +179,6 @@ func loadComicFromFile(dir string, fileName string) *Comic {
 
 func cleanText(text string) string {
 	text = strings.ToLower(text)
-	text = strings.ReplaceAll(text, "\n", " ")
 
 	// There's always a "Title text:" description line
 	text = strings.ReplaceAll(text, "title text:", "")
@@ -187,6 +186,10 @@ func cleanText(text string) string {
 	// Remove all non-alphanumeric characters
 	re := regexp.MustCompile(`[^a-zA-Z\d\s]`)
 	text = re.ReplaceAllLiteralString(text, "")
+
+	// Replace mutliple whitespace with single space
+	re = regexp.MustCompile(`\s+`)
+	text = re.ReplaceAllLiteralString(text, " ")
 
 	return text
 }
