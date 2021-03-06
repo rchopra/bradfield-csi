@@ -37,10 +37,10 @@ func main() {
 	flag.Parse()
 
 	if *downloadFlag {
-		downloadAllComics()
+		downloadAllComics(dataDir)
 	}
 
-	index := buildSearchIndex()
+	index := buildSearchIndex(dataDir)
 
 	// Grab the first non-flag argument
 	term := flag.Arg(0)
@@ -51,17 +51,17 @@ func main() {
 	}
 
 	results := search(term, index)
-	printSearchResults(results, term)
+	printSearchResults(results, term, dataDir)
 }
 
-func downloadAllComics() {
+func downloadAllComics(dir string) {
 	for i := getMaxComicNum(); i > 0; i-- {
 		// This is an Easter Egg -- there is no Comic #404
 		if i == 404 {
 			continue
 		}
 		comicNum := strconv.Itoa(i)
-		saveLoc := dataDir + comicNum + ".json"
+		saveLoc := dir + comicNum + ".json"
 
 		// Download a comic only if it is not already on disk
 		if _, err := os.Stat(saveLoc); os.IsNotExist(err) {
@@ -72,15 +72,15 @@ func downloadAllComics() {
 	}
 }
 
-func buildSearchIndex() searchIndex {
-	files, err := ioutil.ReadDir(dataDir)
+func buildSearchIndex(dir string) searchIndex {
+	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	index := make(searchIndex)
 	for _, file := range files {
-		comic := loadComicFromFile(file.Name())
+		comic := loadComicFromFile(dir, file.Name())
 		searchableText := comic.Title + comic.Transcript
 		cleanedText := cleanText(searchableText)
 		for _, word := range strings.Split(cleanedText, " ") {
@@ -163,8 +163,8 @@ func saveComic(location string, data io.ReadCloser) error {
 	return err
 }
 
-func loadComicFromFile(fileName string) *Comic {
-	data, err := ioutil.ReadFile(dataDir + fileName)
+func loadComicFromFile(dir string, fileName string) *Comic {
+	data, err := ioutil.ReadFile(dir + fileName)
 	if err != nil {
 		log.Fatalf("Failed to open %v", err)
 	}
@@ -191,7 +191,7 @@ func cleanText(text string) string {
 	return text
 }
 
-func printSearchResults(results resultSet, term string) {
+func printSearchResults(results resultSet, term string, dir string) {
 	resultQuantifier := "result"
 	numResults := len(results)
 	if numResults != 1 {
@@ -201,7 +201,7 @@ func printSearchResults(results resultSet, term string) {
 
 	for num, _ := range results {
 		comicNum := strconv.Itoa(num)
-		comic := loadComicFromFile(comicNum + ".json")
+		comic := loadComicFromFile(dir, comicNum+".json")
 		url := comicUrl(comicNum)
 		padding := fmt.Sprintf("%*s", len(url), "=")
 		fmt.Printf("\n%s\n%s\n%s\n", url, strings.ReplaceAll(padding, " ", "="), comic.Transcript)
