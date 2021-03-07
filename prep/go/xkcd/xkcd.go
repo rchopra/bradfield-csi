@@ -26,10 +26,12 @@ type Comic struct {
 	Title      string
 	Transcript string
 }
-
 type resultSet map[int]bool
-
 type searchIndex map[string]resultSet
+
+// Expose as a global to facilitate capturing output for testing, as
+// demonstrated in "The Go Programming Language" 11.2.2 (pg. 309)
+var out io.Writer = os.Stdout
 
 func main() {
 	downloadFlag := flag.Bool("d", false, "Download comics data")
@@ -45,7 +47,7 @@ func main() {
 	// Grab the first non-flag argument
 	term := flag.Arg(0)
 	if term == "" {
-		fmt.Printf("No search term provided.\n")
+		fmt.Fprintf(out, "No search term provided.\n")
 		flag.PrintDefaults()
 		return
 	}
@@ -66,7 +68,7 @@ func downloadAllComics(dir string) {
 		// Download a comic only if it is not already on disk
 		if _, err := os.Stat(saveLoc); os.IsNotExist(err) {
 			if err = downloadComic(comicUrl(comicNum), saveLoc); err != nil {
-				fmt.Println(err.Error())
+				fmt.Fprintln(out, err.Error())
 			}
 		}
 	}
@@ -99,7 +101,7 @@ func search(term string, index searchIndex) resultSet {
 	cleanedTerm := cleanText(term)
 	results, found := index[cleanedTerm]
 	if !found {
-		fmt.Printf("Search term: '%s' not found.\n", term)
+		fmt.Fprintf(out, "Search term: '%s' not found.\n", term)
 	}
 
 	return results
@@ -109,13 +111,13 @@ func getMaxComicNum() int {
 	// The most recent comic is at: xkcd.com/info.0.json, so a blank string will get it for us
 	body, err := requestComic(comicUrl(""))
 	if err != nil {
-		fmt.Printf("Could not get most recent comic. Defaulting to #%d\n", defaultComicNum)
+		fmt.Fprintf(out, "Could not get most recent comic. Defaulting to #%d\n", defaultComicNum)
 		return defaultComicNum
 	}
 
 	var comic Comic
 	if err = json.NewDecoder(body).Decode(&comic); err != nil {
-		fmt.Printf("Error parsing JSON for most recent comic. Defaulting to #%d\n", defaultComicNum)
+		fmt.Fprintf(out, "Error parsing JSON for most recent comic. Defaulting to #%d\n", defaultComicNum)
 		return defaultComicNum
 	}
 	return comic.Num
@@ -126,7 +128,7 @@ func comicUrl(comicNum string) string {
 }
 
 func downloadComic(url string, saveLoc string) error {
-	fmt.Printf("Downloading %s\n", url)
+	fmt.Fprintf(out, "Downloading %s\n", url)
 	data, err := requestComic(url)
 	if err != nil {
 		return err
@@ -200,13 +202,13 @@ func printSearchResults(results resultSet, term string, dir string) {
 	if numResults != 1 {
 		resultQuantifier += "s"
 	}
-	fmt.Printf("%d %s for '%s'\n", len(results), resultQuantifier, term)
+	fmt.Fprintf(out, "%d %s for '%s'\n", len(results), resultQuantifier, term)
 
 	for num, _ := range results {
 		comicNum := strconv.Itoa(num)
 		comic := loadComicFromFile(dir, comicNum+".json")
 		url := comicUrl(comicNum)
 		padding := fmt.Sprintf("%*s", len(url), "=")
-		fmt.Printf("\n%s\n%s\n%s\n", url, strings.ReplaceAll(padding, " ", "="), comic.Transcript)
+		fmt.Fprintf(out, "\n%s\n%s\n%s\n", url, strings.ReplaceAll(padding, " ", "="), comic.Transcript)
 	}
 }
