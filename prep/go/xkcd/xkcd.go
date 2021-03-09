@@ -17,8 +17,8 @@ import (
 const (
 	baseURL         = "https://xkcd.com"
 	jsonPath        = "info.0.json"
-	dataDir         = "data/"
-	defaultComicNum = 2423
+	defaultDataDir  = "data/"
+	defaultComicNum = 2430
 )
 
 type Comic struct {
@@ -28,6 +28,8 @@ type Comic struct {
 }
 type resultSet map[int]bool
 type searchIndex map[string]resultSet
+
+var dataDir = defaultDataDir
 
 // Expose as a global to facilitate capturing output for testing, as
 // demonstrated in "The Go Programming Language" 11.2.2 (pg. 309)
@@ -39,10 +41,10 @@ func main() {
 	flag.Parse()
 
 	if *downloadFlag {
-		downloadAllComics(dataDir)
+		downloadAllComics(getMaxComicNum())
 	}
 
-	index := buildSearchIndex(dataDir)
+	index := buildSearchIndex()
 
 	// Grab the first non-flag argument
 	term := flag.Arg(0)
@@ -53,17 +55,17 @@ func main() {
 	}
 
 	results := search(term, index)
-	printSearchResults(results, term, dataDir)
+	printSearchResults(results, term)
 }
 
-func downloadAllComics(dir string) {
-	for i := getMaxComicNum(); i > 0; i-- {
+func downloadAllComics(maxComicNum int) {
+	for i := maxComicNum; i > 0; i-- {
 		// This is an Easter Egg -- there is no Comic #404
 		if i == 404 {
 			continue
 		}
 		comicNum := strconv.Itoa(i)
-		saveLoc := dir + comicNum + ".json"
+		saveLoc := dataDir + comicNum + ".json"
 
 		// Download a comic only if it is not already on disk
 		if _, err := os.Stat(saveLoc); os.IsNotExist(err) {
@@ -74,15 +76,15 @@ func downloadAllComics(dir string) {
 	}
 }
 
-func buildSearchIndex(dir string) searchIndex {
-	files, err := ioutil.ReadDir(dir)
+func buildSearchIndex() searchIndex {
+	files, err := ioutil.ReadDir(dataDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	index := make(searchIndex)
 	for _, file := range files {
-		comic := loadComicFromFile(dir, file.Name())
+		comic := loadComicFromFile(file.Name())
 		searchableText := comic.Title + "\n" + comic.Transcript
 		cleanedText := cleanText(searchableText)
 		for _, word := range strings.Split(cleanedText, " ") {
@@ -165,8 +167,8 @@ func saveComic(location string, data io.ReadCloser) error {
 	return err
 }
 
-func loadComicFromFile(dir string, fileName string) *Comic {
-	data, err := ioutil.ReadFile(dir + fileName)
+func loadComicFromFile(fileName string) *Comic {
+	data, err := ioutil.ReadFile(dataDir + fileName)
 	if err != nil {
 		log.Fatalf("Failed to open %v", err)
 	}
@@ -196,7 +198,7 @@ func cleanText(text string) string {
 	return text
 }
 
-func printSearchResults(results resultSet, term string, dir string) {
+func printSearchResults(results resultSet, term string) {
 	resultQuantifier := "result"
 	numResults := len(results)
 	if numResults != 1 {
@@ -206,7 +208,7 @@ func printSearchResults(results resultSet, term string, dir string) {
 
 	for num, _ := range results {
 		comicNum := strconv.Itoa(num)
-		comic := loadComicFromFile(dir, comicNum+".json")
+		comic := loadComicFromFile(comicNum + ".json")
 		url := comicUrl(comicNum)
 		padding := fmt.Sprintf("%*s", len(url), "=")
 		fmt.Fprintf(out, "\n%s\n%s\n%s\n", url, strings.ReplaceAll(padding, " ", "="), comic.Transcript)
