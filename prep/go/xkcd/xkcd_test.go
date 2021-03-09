@@ -1,19 +1,21 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 )
 
 func TestSearch(t *testing.T) {
-	// Supress Stdout for the duration of this test only
-	origStdout := os.Stdout
-	os.Stdout, _ = os.Open(os.DevNull)
-	defer func() { os.Stdout = origStdout }()
+	// Supress standard out by having it write to this buffer instead
+	out = new(bytes.Buffer)
 
 	var emptyIndex = make(searchIndex)
 	var smallIndex = make(searchIndex)
@@ -131,6 +133,60 @@ func TestBuildSearchIndex(t *testing.T) {
 }
 
 func TestPrintSearchResults(t *testing.T) {
+	// We want to capture standard out and read off it for this test
+	out = new(bytes.Buffer)
+
+	dir, _ := ioutil.TempDir("", "data")
+	defer os.RemoveAll(dir)
+
+	f, _ := ioutil.TempFile(dir, "*.json")
+	defer os.Remove(f.Name())
+
+	re := regexp.MustCompile(`/(\d+)\.json`)
+	num, _ := strconv.Atoi(re.FindStringSubmatch(f.Name())[1])
+	transcript := "This is an xkcd Comic."
+	f.Write(encodeFakeComic(num, "A Comic", transcript))
+
+	results := make(resultSet)
+	results[num] = true
+
+	printSearchResults(results, "xkcd", dir+"/")
+
+	// With the result printed to standard out, we want to assert the various
+	// parts of the output are appearing correctly
+	got := out.(*bytes.Buffer).String()
+	gotLines := strings.Split(got, "\n")
+	descr := "printSearchResults(results, 'xkcd', dir)"
+
+	// Check the first line contains the number of results
+	wantResults := "1 result"
+	if !strings.Contains(gotLines[0], "1 result") {
+		t.Errorf("%s first line does not match.\n\nGOT:\n%s\n\nWANT:\n%s",
+			descr,
+			gotLines[0],
+			wantResults,
+		)
+	}
+
+	// Check the comic URL was printed
+	wantUrl := comicUrl(strconv.Itoa(num))
+	if !strings.Contains(got, wantUrl) {
+		t.Errorf(
+			"%s URL does not match.\n\nGOT:\n%s\n\nWANT URL:\n%s",
+			descr,
+			got,
+			wantUrl,
+		)
+	}
+
+	// Check that the transcript was printed
+	if !strings.Contains(got, transcript) {
+		t.Errorf("%s transcript does not match.\n\nGOT:\n%s\n\nWANT TRANSCRIPT:\n%s",
+			descr,
+			got,
+			transcript,
+		)
+	}
 }
 
 func TestDownloadAllComics(t *testing.T) {
