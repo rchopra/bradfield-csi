@@ -35,6 +35,23 @@ var dataDir = defaultDataDir
 // demonstrated in "The Go Programming Language" 11.2.2 (pg. 309)
 var out io.Writer = os.Stdout
 
+// Expose the requestComic function as a global to stub out the HTTP request
+// functionality. Again, this technique was taken from "The Go Programming
+// Language" 11.2.3 (pg. 312)
+var requestComic = func(url string) (io.ReadCloser, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("Error downloading %s: %s\n", url, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("Error downloading %s: %s\n", url, resp.Status)
+	}
+
+	return resp.Body, nil
+}
+
 func main() {
 	downloadFlag := flag.Bool("d", false, "Download comics data")
 
@@ -141,20 +158,6 @@ func downloadComic(url string, saveLoc string) error {
 		return fmt.Errorf("Error saving comic to %s: %s\n", saveLoc, err)
 	}
 	return nil
-}
-
-func requestComic(url string) (io.ReadCloser, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("Error downloading %s: %s\n", url, err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		_ = resp.Body.Close()
-		return nil, fmt.Errorf("Error downloading %s: %s\n", url, resp.Status)
-	}
-
-	return resp.Body, nil
 }
 
 func saveComic(location string, data io.ReadCloser) error {
