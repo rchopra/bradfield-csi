@@ -53,9 +53,23 @@ var requestComic = func(url string) (io.ReadCloser, error) {
 }
 
 func main() {
-	downloadFlag := flag.Bool("d", false, "Download comics data")
+	downloadFlag := flag.Bool("d", false, "Download missing comics")
+	saveDirFlag := flag.String("l", defaultDataDir, "Downloaded comics location")
 
 	flag.Parse()
+
+	if *saveDirFlag != defaultDataDir {
+		if _, err := ioutil.ReadDir(*saveDirFlag); os.IsNotExist(err) {
+			fmt.Fprintf(out, "Directory %s does not exist, exiting.\n", *saveDirFlag)
+			return
+		}
+		dataDir = *saveDirFlag
+
+		// Append the trailing forward slash if missing
+		if dataDir[len(dataDir)-1] != '/' {
+			dataDir += "/"
+		}
+	}
 
 	if *downloadFlag {
 		downloadAllComics(getMaxComicNum())
