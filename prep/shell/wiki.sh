@@ -3,7 +3,7 @@
 # Grabbing JSON from the [MediaWiki
 # API](https://www.mediawiki.org/wiki/API:Main_page)
 WIKI_BASE="https://en.wikipedia.org/w/api.php"
-PARAMS="action=query&format=json&prop=extracts&explaintext=1&redirects=1"
+PARAMS="action=query&format=json&prop=extracts&explaintext=1&redirects=1&utf8=1"
 
 # This is some very basic awk to pull out the section headers from the
 # response. The headers look like == Name of Section ==, so I'm pulling out the
