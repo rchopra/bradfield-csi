@@ -22,6 +22,14 @@ function extract_sections() {
   }"
 }
 
+# Top-level section info
+function section_info() {
+  echo "$1" | grep -Eo '"level".*?line":".*?","number":".*?"' | grep '"level":"2"'
+}
+
+# Just section names
+#grep -Eo '"level".*?line":".*?","number":".*?"' test2.json | grep '"level":"2"' | cut -d: -f3 | cut -d\" -f2
+
 # This is surely buggy, but just taking up to the first period in the text
 # passed in and adding the period back on the end.
 function extract_intro() {
@@ -36,8 +44,8 @@ function section_text() {
 #TODO: Error handling from curl
 #TODO: What happens if a page is not found
 #TODO: Handle multi-word/punctuation inputs
-RESP=$(curl -s -XGET "$WIKI_BASE?$PARAMS&titles=$1")
-#RESP=$(cat test.json)
+#RESP=$(curl -s -XGET "$WIKI_BASE?$PARAMS&titles=$1")
+RESP=$(cat test2.json)
 
 # I really want to use [jq](https://stedolan.github.io/jq/) for this but it
 # seems counter to the spirit of this exercise, so here's some gnarly sed
@@ -49,7 +57,7 @@ SECTIONS=""
 
 if [[ "$#" -eq 1 ]]; then
   INTRO=$(extract_intro "$FULL_TEXT")
-  SECTIONS=$(extract_sections "$FULL_TEXT" "==")
+  SECTIONS=$(section_info "$FULL_TEXT")
 elif [[ "$#" -eq 2 ]]; then
   SECTION_TEXT=$(section_text "$FULL_TEXT" "$2")
   INTRO=$(extract_intro "$(echo "$SECTION_TEXT" | cut -d= -f5 | cut -c 5-)")
@@ -58,5 +66,7 @@ else
   echo "Wrong number of arguments."
   exit 1
 fi
+
+# To get subsections, need to find the number of the parent section and print everything that is one level below
 
 printf "%s\n\n%s\n" "$INTRO" "$SECTIONS"
