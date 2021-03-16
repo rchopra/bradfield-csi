@@ -25,7 +25,14 @@ function extract_sections() {
 # This is surely buggy, but just taking up to the first period in the text
 # passed in and adding the period back on the end.
 function extract_intro() {
-  echo "${1%%.*}."
+  # Some sections don't have any text, just subsections. Our regex leaves just
+  # a newline in this case, so we'll return the empty string and not display
+  # it.
+  if [[ $1 == "\n" ]]; then
+    echo ""
+  else
+    echo "${1%%.*}."
+  fi
 }
 
 # Get the entire text of the requested subsection
@@ -33,11 +40,22 @@ function section_text() {
   echo "$1" | grep -Eio "== $2 ==\\\n\\\n.*?\\\n\\\n\\\n== "
 }
 
+# Print final formatted results, with the first argument the intro and the
+# second argument a section list. Need to account for either being empty.
+function print_results() {
+  if [[ $1 == "" ]]; then
+    echo "$2"
+  elif [[ $2 == "" ]]; then
+    echo "$1"
+  else
+    printf "%s\n\n%s\n" "$1" "$2"
+  fi
+}
+
 #TODO: Error handling from curl
 #TODO: What happens if a page is not found
 #TODO: Handle multi-word/punctuation inputs
 RESP=$(curl -s -XGET "$WIKI_BASE?$PARAMS&titles=$1")
-#RESP=$(cat test.json)
 
 # I really want to use [jq](https://stedolan.github.io/jq/) for this but it
 # seems counter to the spirit of this exercise, so here's some gnarly sed
@@ -47,6 +65,9 @@ FULL_TEXT=$(echo "$RESP" | sed -n 's/^.*extract":"\(.*\)}}}}.*$/\1/p')
 INTRO=""
 SECTIONS=""
 
+# This is very lazy only accepting two arguments. A better solution would be to
+# accept any number of params, allowing the user to navigate to arbitrary depth
+# in the section hierarcy, e.g. `wiki chess theory middlegame tactics`
 if [[ "$#" -eq 1 ]]; then
   INTRO=$(extract_intro "$FULL_TEXT")
   SECTIONS=$(extract_sections "$FULL_TEXT" "==")
@@ -59,4 +80,4 @@ else
   exit 1
 fi
 
-printf "%s\n\n%s\n" "$INTRO" "$SECTIONS"
+print_results "$INTRO" "$SECTIONS"
