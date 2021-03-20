@@ -5,21 +5,13 @@
 WIKI_BASE="https://en.wikipedia.org/w/api.php"
 PARAMS="action=query&format=json&prop=extracts&explaintext=1&redirects=1&utf8=1"
 
-# This is some very basic awk to pull out the section headers from the
-# response. The headers look like == Name of Section ==, so I'm pulling out the
+# The headers look like == Name of Section ==, so I'm pulling out the
 # text between the equal signs. The second argument is the number of equal signs
 function extract_sections() {
-  echo "$1" | awk "BEGIN {
-    OFS=\"\n\";
-    pattern=\"n$2 [^=]* $2\";
-  }
-
-  {
-    while (match(\$0, pattern)) {
-      printf substr(\$0, RSTART+${#2}+2, RLENGTH-$((${#2}*2 + 2))) OFS;
-      \$0=substr(\$0, RSTART+RLENGTH)
-    }
-  }"
+  echo "$1" |
+    grep -Eo "\\\n$2\s.*?\s$2" | # Results in lines like "\n== Section 1 =="
+    awk -F"$2" '{print $2}' |    # Grab what's between the equals
+    cut -c2-                     # Remove the leading space
 }
 
 # This is surely buggy, but just taking up to the first period in the text
