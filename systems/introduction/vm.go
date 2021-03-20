@@ -31,13 +31,25 @@ func compute(memory []byte) {
 
 	// Keep looping, like a physical computer's clock
 	for {
+		instr := memory[registers[0] : registers[0]+3] // The full 3-byte instruction
+		op := instr[0]
 
-		// op := TODO // fetch the opcode
+		// decode and execute
+		switch op {
+		case Load:
+			registers[instr[1]] = memory[instr[2]]
+		case Store:
+			memory[instr[2]] = registers[instr[1]]
+		case Add:
+			registers[instr[1]] = registers[instr[1]] + registers[instr[2]]
+		case Sub:
+			registers[instr[1]] = registers[instr[1]] - registers[instr[2]]
+		case Halt:
+			return
+		default:
+			panic("Unkown Instruction")
+		}
 
-		// // decode and execute
-		// switch op {
-		// case Load:
-		//   TODO
-		// ...
+		registers[0] += 3 // Increment PC to next instruction
 	}
 }
