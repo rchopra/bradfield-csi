@@ -42,6 +42,10 @@ func compute(memory []byte) {
 		case Load:
 			registers[instr[1]] = memory[instr[2]]
 		case Store:
+			if instr[2] >= 8 {
+				// We don't want to write in the instructions portion of memory
+				panic("Segmentation Fault!")
+			}
 			memory[instr[2]] = registers[instr[1]]
 		case Add:
 			registers[instr[1]] = registers[instr[1]] + registers[instr[2]]
